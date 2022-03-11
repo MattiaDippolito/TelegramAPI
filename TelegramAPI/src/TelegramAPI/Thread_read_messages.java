@@ -14,23 +14,46 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.util.*;
+import javax.swing.event.EventListenerList;
 
 /**
  *
  * @author HP
  */
-public class Thread_read_messages extends Thread {
+public class Thread_read_messages extends Thread{
 
     private String api_bot;
     private String toDo;
     private int previousID;
+    private EventListenerList listeners;
 
     public Thread_read_messages(String api_bot) {
         this.api_bot = api_bot;
         toDo = "https://api.telegram.org/bot" + api_bot + "/getUpdates";
         previousID = 0;
+        listeners= new EventListenerList();
     }
 
+    public void addMyListener(MyEventListener listener){
+       listeners.add(MyEventListener.class, listener);
+   }
+    public void removeMyListener(MyEventListener listener)
+    {
+       listeners.remove(MyEventListener.class, listener);
+   }
+    
+     private void fireNewMessage(long id, String message){
+         Object[] listenersArray = listeners.getListenerList();
+         for(int i = listenersArray.length - 2; i >= 0; i -= 2){
+             if(listenersArray[i] == MyEventListener.class){
+                 ((MyEventListener)listenersArray[i+1]).onNewMessage(id,message);
+             }
+         }
+    }
+     
+     
+     
     @Override
     public void run() {
         while (true) {
@@ -57,6 +80,7 @@ public class Thread_read_messages extends Thread {
                         if(obj_message.getInt("message_id") > previousID){
                             previousID = obj_message.getInt("message_id");
                             System.out.println(obj_message.getString("text"));
+                            fireNewMessage(0,"CIAO");//oggetto messaggio id nome messaggio
                         }
                     }
                 }
@@ -68,3 +92,6 @@ public class Thread_read_messages extends Thread {
         }
     }
 }
+
+
+
