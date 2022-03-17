@@ -27,7 +27,7 @@ public class Gestore_json {
         this.api_bot = api_bot;
     }
 
-    public void SendMessage(String id, String message) throws MalformedURLException, IOException {
+    public void SendMessage(int id, String message) throws MalformedURLException, IOException {
         String string = "https://api.telegram.org/bot" + api_bot + "/sendMessage?chat_id=" + id + "&text=" + URLEncoder.encode(message, "utf8");
         System.out.println(string);
         URL url = new URL(string);

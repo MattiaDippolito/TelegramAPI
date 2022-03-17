@@ -6,6 +6,9 @@
 package TelegramAPI;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
@@ -21,39 +24,42 @@ import javax.swing.event.EventListenerList;
  *
  * @author HP
  */
-public class Thread_read_messages extends Thread{
+public class Thread_read_messages extends Thread {
 
     private String api_bot;
     private String toDo;
     private int previousID;
     private EventListenerList listeners;
+    private String filename = "id.txt";
 
-    public Thread_read_messages(String api_bot) {
+    public Thread_read_messages(String api_bot) throws FileNotFoundException, IOException {
+        FileReader fr = new FileReader(filename);
+        BufferedReader br = new BufferedReader(fr);
+        int id = Integer.valueOf(br.readLine());
+
         this.api_bot = api_bot;
         toDo = "https://api.telegram.org/bot" + api_bot + "/getUpdates";
-        previousID = 0;
-        listeners= new EventListenerList();
+        previousID = id;
+        listeners = new EventListenerList();
     }
 
-    public void addMyListener(MyEventListener listener){
-       listeners.add(MyEventListener.class, listener);
-   }
-    public void removeMyListener(MyEventListener listener)
-    {
-       listeners.remove(MyEventListener.class, listener);
-   }
-    
-     private void fireNewMessage(long id, String message){
-         Object[] listenersArray = listeners.getListenerList();
-         for(int i = listenersArray.length - 2; i >= 0; i -= 2){
-             if(listenersArray[i] == MyEventListener.class){
-                 ((MyEventListener)listenersArray[i+1]).onNewMessage(id,message);
-             }
-         }
+    public void addMyListener(MyEventListener listener) {
+        listeners.add(MyEventListener.class, listener);
     }
-     
-     
-     
+
+    public void removeMyListener(MyEventListener listener) {
+        listeners.remove(MyEventListener.class, listener);
+    }
+
+    private void fireNewMessage(JMessaggio messaggio) {
+        Object[] listenersArray = listeners.getListenerList();
+        for (int i = listenersArray.length - 2; i >= 0; i -= 2) {
+            if (listenersArray[i] == MyEventListener.class) {
+                ((MyEventListener) listenersArray[i + 1]).onNewMessage(messaggio);
+            }
+        }
+    }
+
     @Override
     public void run() {
         while (true) {
@@ -77,10 +83,21 @@ public class Thread_read_messages extends Thread{
                     JSONObject obj_content = new JSONObject(content.toString());
                     if (!obj_content.isNull("message")) {
                         JSONObject obj_message = obj_content.getJSONObject("message");
-                        if(obj_message.getInt("message_id") > previousID){
+                        if (obj_message.getInt("message_id") > previousID) {
                             previousID = obj_message.getInt("message_id");
-                            System.out.println(obj_message.getString("text"));
-                            fireNewMessage(0,"CIAO");//oggetto messaggio id nome messaggio
+                            
+                            int idChat = obj_message.getJSONObject("chat").getInt("id");
+                            String m = obj_message.getString("text");
+                            String nome = obj_message.getJSONObject("from").getString("first_name");
+                            JMessaggio messaggio = new JMessaggio(idChat, m, nome);
+                            fireNewMessage(messaggio);
+
+                            /*------------------------------------------------------------------*/
+                            //SALVO ID
+                            FileWriter writer = new FileWriter(filename);
+                            writer.write(String.valueOf(previousID));
+                            writer.close();
+                            /*------------------------------------------------------------------*/
                         }
                     }
                 }
@@ -92,6 +109,3 @@ public class Thread_read_messages extends Thread{
         }
     }
 }
-
-
-

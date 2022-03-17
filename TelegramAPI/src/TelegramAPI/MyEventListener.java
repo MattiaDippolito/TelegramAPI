@@ -13,7 +13,7 @@ import java.util.EventListener;
  */
  public interface MyEventListener extends EventListener{
      //Metodi da implementare per essere un ascoltatore del sorgente
-     public void onNewMessage(long id, String message);
+     public void onNewMessage(JMessaggio messaggio);
     //eventuali altri metodi
  }   
  
