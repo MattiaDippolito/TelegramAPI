@@ -27,20 +27,15 @@ import javax.swing.event.EventListenerList;
 public class Thread_read_messages extends Thread {
 
     private String api_bot;
-    private String toDo;
-    private int previousID;
+    private int update_id;
     private EventListenerList listeners;
-    private String filename = "id.txt";
+    private boolean first;
 
-    public Thread_read_messages(String api_bot) throws FileNotFoundException, IOException {
-        FileReader fr = new FileReader(filename);
-        BufferedReader br = new BufferedReader(fr);
-        int id = Integer.valueOf(br.readLine());
-
+    public Thread_read_messages(String api_bot) throws FileNotFoundException {
         this.api_bot = api_bot;
-        toDo = "https://api.telegram.org/bot" + api_bot + "/getUpdates";
-        previousID = id;
+        update_id = 0;
         listeners = new EventListenerList();
+        first = true;
     }
 
     public void addMyListener(MyEventListener listener) {
@@ -64,46 +59,49 @@ public class Thread_read_messages extends Thread {
     public void run() {
         while (true) {
             try {
-                URL url = new URL(toDo);
-
-                BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
-                String s;
                 String tutto = "";
-                do {
-                    s = br.readLine();
-                    if (s != null) {
-                        tutto += s;
-                    }
-                } while (s != null);
+                if (first) {
+                    URL url = new URL("https://api.telegram.org/bot" + api_bot + "/getUpdates");
+                    BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+                    String s;
+                    do {
+                        s = br.readLine();
+                        if (s != null) {
+                            tutto += s;
+                        }
+                    } while (s != null);
+                    first = false;
+                } else {
+                    URL url = new URL("https://api.telegram.org/bot" + api_bot + "/getUpdates?offset=" + update_id);
+                    BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+                    String s;
+                    do {
+                        s = br.readLine();
+                        if (s != null) {
+                            tutto += s;
+                        }
+                    } while (s != null);
+                }
 
                 JSONObject Jobj = new JSONObject(tutto);
                 JSONArray result = Jobj.getJSONArray("result");
                 for (int i = 0; i < result.length(); i++) {
-                    Object content = result.get(i);/*"{"update_id":93552028,"message":{"date":1646331313,"chat":{"id":959044774,"type":"private","first_name":"Mattia"},"message_id":6,"from":{"language_code":"it","id":959044774,"is_bot":false,"first_name":"Mattia"},"text":"ciao"}}"*/
-                    JSONObject obj_content = new JSONObject(content.toString());
-                    if (!obj_content.isNull("message")) {
-                        JSONObject obj_message = obj_content.getJSONObject("message");
-                        if (obj_message.getInt("message_id") > previousID) {
-                            previousID = obj_message.getInt("message_id");
-                            
-                            int idChat = obj_message.getJSONObject("chat").getInt("id");
-                            String m = obj_message.getString("text");
-                            String nome = obj_message.getJSONObject("from").getString("first_name");
-                            JMessaggio messaggio = new JMessaggio(idChat, m, nome);
-                            fireNewMessage(messaggio);
-
-                            /*------------------------------------------------------------------*/
-                            //SALVO ID
-                            FileWriter writer = new FileWriter(filename);
-                            writer.write(String.valueOf(previousID));
-                            writer.close();
-                            /*------------------------------------------------------------------*/
-                        }
-                    }
+                    JSONObject obj_message = result.getJSONObject(i).getJSONObject("message");
+                    int idChat = obj_message.getJSONObject("chat").getInt("id");
+                    String m = obj_message.getString("text");
+                    String nome = obj_message.getJSONObject("from").getString("first_name");
+                    update_id = result.getJSONObject(i).getInt("update_id") + 1;
+                    JMessaggio messaggio = new JMessaggio(idChat, m, nome);
+                    fireNewMessage(messaggio);
                 }
             } catch (MalformedURLException ex) {
                 Logger.getLogger(Thread_read_messages.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
+                Logger.getLogger(Thread_read_messages.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            try {
+                sleep(1000);
+            } catch (InterruptedException ex) {
                 Logger.getLogger(Thread_read_messages.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
