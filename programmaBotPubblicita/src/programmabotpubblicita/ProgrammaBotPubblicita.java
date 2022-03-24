@@ -7,6 +7,7 @@ package programmabotpubblicita;
 
 import TelegramAPI.*;
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -29,9 +30,6 @@ import org.xml.sax.SAXException;
  */
 public class ProgrammaBotPubblicita {
 
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args) throws IOException {
         Gestore_json gj = new Gestore_json("5209120531:AAEAcuXnl2pUC0ibZiDTuYWeONiDoXc4RzM");
 
@@ -39,6 +37,8 @@ public class ProgrammaBotPubblicita {
         trm.addMyListener(new MyEventListener() {
             @Override
             public void onNewMessage(JMessaggio messaggio) {
+                String file_csv = "locations.txt";
+
                 String[] campi = messaggio.getMessaggio().split(" ");
                 if (campi[0].equals("/città")) {
                     try {
@@ -88,6 +88,32 @@ public class ProgrammaBotPubblicita {
                                 lon = place.getAttribute("lon");
                             }
                         }
+
+                        String file = "";
+                        FileReader fr = new FileReader(file_csv);
+                        BufferedReader br_csv = new BufferedReader(fr);
+                        String line = "";
+                        boolean gia_presente = false;
+                        do {
+                            line = br_csv.readLine();
+                            if (line != null) {
+                                String[] campi_csv = line.split(";");
+                                int id = Integer.parseInt(campi_csv[0]);
+                                if (id == messaggio.getId()) {
+                                    file += messaggio.getId() + ";" + messaggio.getNome() + ";" + lat + ";" + lon + ";\n";
+                                    gia_presente = true;
+                                } else {
+                                    file += line + "\n";
+                                }
+                            }
+                        } while (line != null);
+                        if (!gia_presente) {
+                            file += messaggio.getId() + ";" + messaggio.getNome() + ";" + lat + ";" + lon + ";\n";
+                        }
+                        FileWriter writer_csv = new FileWriter(file_csv);
+                        writer_csv.write(file);
+                        writer_csv.close();
+                        
                         try {
                             gj.SendMessage(messaggio.getId(), display_name + " Latitudine: " + lat + " Longitudine: " + lon);
                         } catch (IOException ex) {
@@ -109,4 +135,3 @@ public class ProgrammaBotPubblicita {
         trm.start();
     }
 }
-//per prendere la città giusta guardo che esista il tag town o city
